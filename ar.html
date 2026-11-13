@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Maqueta3d en AR</title>
+<script src="https://cdn.jsdelivr.net/npm/aframe@1.3.0/dist/aframe-v1.3.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@ar-js-org/ar.js@3.4.8/aframe/build/aframe-ar.js"></script>
+<style>
+  html,body{margin:0;height:100%;overflow:hidden;background:#000;font-family:Arial,sans-serif;touch-action:none}
+  #top{position:fixed;top:0;left:0;right:0;z-index:20;padding:10px 12px;color:#fff;background:rgba(31,56,100,.9);font-size:17px;font-weight:bold;
+       display:flex;justify-content:space-between;align-items:center}
+  #top a{color:#fff;font-size:14px;font-weight:normal}
+  #estado{position:fixed;left:12px;right:12px;top:60px;z-index:20;text-align:center;color:#fff;background:rgba(0,0,0,.65);
+          border-radius:12px;padding:10px;font-size:16px}
+  #panel{position:fixed;left:8px;right:8px;bottom:10px;z-index:20;display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+  button{font:bold 16px Arial;border:0;border-radius:24px;padding:12px 16px;min-height:48px;background:#fff;color:#1f3864;box-shadow:0 1px 5px rgba(0,0,0,.4)}
+  button[aria-pressed="false"]{background:#3b4a5c;color:#cfd8e3;text-decoration:line-through}
+  .a-enter-vr,.a-orientation-modal{display:none!important}
+</style>
+</head>
+<body>
+<div id="top"><span>Maqueta3d · AR</span><a href="index.html">Ver sin AR</a></div>
+<div id="estado">Permite la cámara y apunta al marcador impreso…</div>
+<div id="panel"></div>
+
+<a-scene embedded vr-mode-ui="enabled: false" renderer="alpha: true; antialias: true"
+  gltf-model="dracoDecoderPath: https://www.gstatic.com/draco/versioned/decoders/1.5.6/"
+  arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: false; cameraParametersUrl: camera_para.dat; patternRatio: 0.5; maxDetectionRate: 30;">
+  <a-light type="ambient" color="#ffffff" intensity="0.7"></a-light>
+  <a-light type="directional" color="#ffffff" intensity="0.6" position="1 3 2"></a-light>
+  <a-marker id="marcador" type="pattern" url="marcador.patt" smooth="true" smoothCount="8" smoothTolerance="0.01" smoothThreshold="4">
+    <a-entity id="pivot">
+      <!-- La maqueta mide 1.09 unidades de ancho (= el ancho del marcador). Escala 1.2 y desplazamiento para centrarla sobre el marcador -->
+      <a-entity id="modelo" gltf-model="url(maqueta.glb)" scale="1.2 1.2 1.2" position="-0.75 0.0252 0.7236"></a-entity>
+    </a-entity>
+  </a-marker>
+  <a-entity camera></a-entity>
+</a-scene>
+
+<script>
+const estado=document.getElementById('estado'), panel=document.getElementById('panel');
+const pivot=document.getElementById('pivot'), marcador=document.getElementById('marcador'), modelo=document.getElementById('modelo');
+let cargado=false, visto=false;
+function msg(t){estado.style.display=t?'block':'none'; estado.textContent=t||'';}
+msg('Cargando maqueta…');
+modelo.addEventListener('model-loaded',()=>{
+  cargado=true; msg(visto?'':'Apunta la cámara al marcador impreso');
+  // grupos de capas (por nombre de material dentro del GLB)
+  const grupos=[["Cubierta",["mat_cubierta","mat_cielos"]],["Terreno",["mat_pasto","mat_asfalto","mat_terreno_base","mat_plaza"]],
+    ["Vidrios",["mat_vidrio"]],["Mobiliario",["mat_mobiliario"]],["Plantas",["mat_plantas"]]];
+  const meshes=[]; modelo.object3D.traverse(o=>{ if(o.isMesh&&o.material){ meshes.push(o); } });
+  grupos.forEach(([t,names])=>{
+    const b=document.createElement('button'); b.textContent=t; b.setAttribute('aria-pressed','true');
+    b.addEventListener('click',()=>{ const ver=b.getAttribute('aria-pressed')!=='true'; b.setAttribute('aria-pressed',ver);
+      meshes.forEach(m=>{ const mats=[].concat(m.material); if(mats.some(x=>names.includes(x.name))) m.visible=ver; }); });
+    panel.appendChild(b);
+  });
+  const r=document.createElement('button'); r.textContent='Reiniciar';
+  r.addEventListener('click',()=>{pivot.object3D.rotation.y=0; pivot.object3D.scale.set(1,1,1);}); panel.appendChild(r);
+});
+modelo.addEventListener('model-error',e=>msg('No se pudo cargar maqueta.glb'));
+marcador.addEventListener('markerFound',()=>{visto=true; msg('');console.log('markerFound');});
+marcador.addEventListener('markerLost',()=>{ if(cargado) msg('Apunta la cámara al marcador impreso'); });
+
+// Interacción con los dedos: 1 dedo gira la maqueta, 2 dedos acercan o alejan
+let ult=null, dist0=null, esc0=1;
+const d=(a,b)=>Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY);
+window.addEventListener('touchstart',e=>{
+  if(e.target.closest('button')) return;
+  if(e.touches.length===1){ult=e.touches[0].clientX;}
+  if(e.touches.length===2){dist0=d(e.touches[0],e.touches[1]); esc0=pivot.object3D.scale.x;}
+},{passive:true});
+window.addEventListener('touchmove',e=>{
+  if(e.target.closest('button')) return;
+  if(e.touches.length===1&&ult!==null){ const x=e.touches[0].clientX; pivot.object3D.rotation.y+=(x-ult)*0.01; ult=x; }
+  if(e.touches.length===2&&dist0){ const s=Math.min(4,Math.max(0.3,esc0*d(e.touches[0],e.touches[1])/dist0)); pivot.object3D.scale.set(s,s,s); }
+},{passive:true});
+window.addEventListener('touchend',()=>{ult=null;dist0=null;});
+// En computador: arrastrar con el mouse y rueda para el zoom (solo para pruebas)
+let md=false,mx=0; window.addEventListener('mousedown',e=>{if(!e.target.closest('button')){md=true;mx=e.clientX;}});
+window.addEventListener('mouseup',()=>md=false);
+window.addEventListener('mousemove',e=>{ if(md){pivot.object3D.rotation.y+=(e.clientX-mx)*0.01;mx=e.clientX;} });
+window.addEventListener('wheel',e=>{ const s=Math.min(4,Math.max(0.3,pivot.object3D.scale.x*(e.deltaY<0?1.1:0.9))); pivot.object3D.scale.set(s,s,s); });
+</script>
+</body>
+</html>
