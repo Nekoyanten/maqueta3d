@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Maqueta3d</title>
+<script type="module" src="https://cdn.jsdelivr.net/npm/@google/model-viewer@3.5.0/dist/model-viewer.min.js"></script>
+<style>
+  html,body{margin:0;height:100%;font-family:Arial,sans-serif;background:#eef1f5}
+  header{padding:12px 16px;background:#1f3864;color:#fff;font-size:20px;font-weight:bold}
+  model-viewer{width:100%;height:calc(100% - 92px);--poster-color:#eef1f5}
+  .ar-btn{position:absolute;bottom:68px;left:50%;transform:translateX(-50%);background:#0a4dbf;color:#fff;
+    border:0;border-radius:28px;padding:14px 28px;font-size:18px;font-weight:bold;box-shadow:0 2px 8px rgba(0,0,0,.3)}
+  footer{height:36px;line-height:36px;text-align:center;font-size:13px;color:#555}
+  #msg{position:absolute;top:60px;left:0;right:0;text-align:center;color:#a8201a;font-weight:bold}
+</style>
+</head>
+<body>
+<header>Maqueta3d</header>
+<model-viewer id="mv" src="maqueta.glb" alt="Maqueta 3D"
+  camera-controls touch-action="pan-y" auto-rotate shadow-intensity="1" exposure="1"
+  ar ar-modes="webxr scene-viewer quick-look" ar-scale="auto" ar-placement="floor">
+  <button slot="ar-button" class="ar-btn">Ver en AR</button>
+</model-viewer>
+<div id="msg"></div>
+<footer>Un dedo: girar · Dos dedos: acercar y mover</footer>
+<script>
+  document.getElementById('mv').addEventListener('error', function(){
+    document.getElementById('msg').textContent='No se pudo cargar maqueta.glb. Revisa que el archivo esté en la misma carpeta.';
+  });
+</script>
+</body>
+</html>
