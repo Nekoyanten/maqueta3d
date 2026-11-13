@@ -27,7 +27,7 @@
 <main>
 <model-viewer id="mv" src="maqueta.glb" alt="Maqueta 3D"
   camera-controls touch-action="none" auto-rotate auto-rotate-delay="4000"
-  camera-orbit="35deg 62deg auto" min-camera-orbit="auto 5deg auto"
+  camera-orbit="35deg 60deg 1.7m" min-camera-orbit="auto 5deg 0.3m" max-camera-orbit="auto 90deg 6m" interaction-prompt="none"
   environment-image="neutral" exposure="1.05" shadow-intensity="1.4" shadow-softness="0.8"
   ar ar-modes="webxr scene-viewer quick-look" ar-scale="auto" ar-placement="floor">
   <button slot="ar-button" class="ar-btn" id="ar">Ver en AR</button>
@@ -67,7 +67,7 @@ mv.addEventListener('load',()=>{
     panel.appendChild(b);
   });
   const r=document.createElement('button'); r.textContent='Reiniciar vista';
-  r.onclick=()=>{mv.cameraOrbit='35deg 62deg auto';mv.resetTurntableRotation&&mv.resetTurntableRotation();mv.jumpCameraToGoal&&mv.jumpCameraToGoal();};
+  r.onclick=()=>{mv.cameraOrbit='35deg 60deg 1.7m';mv.resetTurntableRotation&&mv.resetTurntableRotation();mv.jumpCameraToGoal&&mv.jumpCameraToGoal();};
   panel.appendChild(r);
 });
 </script>
