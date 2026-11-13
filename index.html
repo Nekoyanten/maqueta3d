@@ -6,28 +6,70 @@
 <title>Maqueta3d</title>
 <script type="module" src="https://cdn.jsdelivr.net/npm/@google/model-viewer@3.5.0/dist/model-viewer.min.js"></script>
 <style>
-  html,body{margin:0;height:100%;font-family:Arial,sans-serif;background:#eef1f5}
-  header{padding:12px 16px;background:#1f3864;color:#fff;font-size:20px;font-weight:bold}
-  model-viewer{width:100%;height:calc(100% - 92px);--poster-color:#eef1f5}
-  .ar-btn{position:absolute;bottom:68px;left:50%;transform:translateX(-50%);background:#0a4dbf;color:#fff;
-    border:0;border-radius:28px;padding:14px 28px;font-size:18px;font-weight:bold;box-shadow:0 2px 8px rgba(0,0,0,.3)}
-  footer{height:36px;line-height:36px;text-align:center;font-size:13px;color:#555}
-  #msg{position:absolute;top:60px;left:0;right:0;text-align:center;color:#a8201a;font-weight:bold}
+  :root{--pri:#0A4DBF;--bg1:#c9d3de;--bg2:#8ea0b4}
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;font-family:Arial,sans-serif;background:var(--bg2)}
+  header{height:48px;line-height:48px;padding:0 16px;background:#1f3864;color:#fff;font-size:20px;font-weight:bold}
+  main{position:relative;height:calc(100% - 48px)}
+  model-viewer{width:100%;height:100%;background:linear-gradient(#dfe6ee,#8ea0b4);--poster-color:transparent}
+  #panel{position:absolute;left:8px;right:8px;bottom:8px;display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+  button{font:bold 16px Arial;border:0;border-radius:24px;padding:12px 16px;min-height:48px;cursor:pointer;
+    background:#fff;color:#1f3864;box-shadow:0 1px 5px rgba(0,0,0,.3)}
+  button[aria-pressed="false"]{background:#3b4a5c;color:#cfd8e3;text-decoration:line-through}
+  .ar-btn{background:var(--pri);color:#fff;font-size:18px;padding:12px 22px}
+  #ar{position:absolute;top:10px;right:10px}
+  #msg{position:absolute;top:60px;left:0;right:0;text-align:center;color:#a8201a;font-weight:bold;pointer-events:none}
+  #hint{position:absolute;top:10px;left:10px;background:rgba(255,255,255,.85);border-radius:10px;padding:6px 10px;font-size:13px;color:#333}
 </style>
 </head>
 <body>
 <header>Maqueta3d</header>
+<main>
 <model-viewer id="mv" src="maqueta.glb" alt="Maqueta 3D"
-  camera-controls touch-action="pan-y" auto-rotate shadow-intensity="1" exposure="1"
+  camera-controls touch-action="none" auto-rotate auto-rotate-delay="4000"
+  camera-orbit="35deg 62deg auto" min-camera-orbit="auto 5deg auto"
+  environment-image="neutral" exposure="1.05" shadow-intensity="1.4" shadow-softness="0.8"
   ar ar-modes="webxr scene-viewer quick-look" ar-scale="auto" ar-placement="floor">
-  <button slot="ar-button" class="ar-btn">Ver en AR</button>
+  <button slot="ar-button" class="ar-btn" id="ar">Ver en AR</button>
 </model-viewer>
+<div id="hint">1 dedo: girar · 2 dedos: acercar y mover</div>
 <div id="msg"></div>
-<footer>Un dedo: girar · Dos dedos: acercar y mover</footer>
+<div id="panel"></div>
+</main>
 <script>
-  document.getElementById('mv').addEventListener('error', function(){
-    document.getElementById('msg').textContent='No se pudo cargar maqueta.glb. Revisa que el archivo esté en la misma carpeta.';
+// Grupos que se pueden mostrar u ocultar (nombres de materiales dentro del GLB)
+const GRUPOS=[
+  ["Cubierta",["mat_cubierta","mat_cielos"]],
+  ["Terreno",["mat_pasto","mat_asfalto","mat_terreno_base","mat_plaza"]],
+  ["Vidrios",["mat_vidrio"]],
+  ["Celosías",["mat_celosias"]],
+  ["Mobiliario",["mat_mobiliario"]],
+  ["Plantas",["mat_plantas"]],
+  ["Pisos",["mat_pisos"]],
+];
+const mv=document.getElementById('mv'), panel=document.getElementById('panel');
+mv.addEventListener('error',()=>{document.getElementById('msg').textContent='No se pudo cargar maqueta.glb. Revisa que esté en la misma carpeta.';});
+mv.addEventListener('load',()=>{
+  const mats=mv.model.materials, orig={};
+  mats.forEach(m=>orig[m.name]={mode:m.getAlphaMode?m.getAlphaMode():'OPAQUE',c:m.pbrMetallicRoughness.baseColorFactor.slice()});
+  panel.innerHTML='';
+  GRUPOS.forEach(([titulo,nombres])=>{
+    const b=document.createElement('button'); b.textContent=titulo; b.setAttribute('aria-pressed','true');
+    b.onclick=()=>{
+      const ver=b.getAttribute('aria-pressed')!=='true';
+      b.setAttribute('aria-pressed',ver);
+      nombres.forEach(n=>{
+        const m=mats.find(x=>x.name===n); if(!m)return; const o=orig[n];
+        m.setAlphaMode(ver?o.mode:'BLEND');
+        m.pbrMetallicRoughness.setBaseColorFactor([o.c[0],o.c[1],o.c[2],ver?o.c[3]:0]);
+      });
+    };
+    panel.appendChild(b);
   });
+  const r=document.createElement('button'); r.textContent='Reiniciar vista';
+  r.onclick=()=>{mv.cameraOrbit='35deg 62deg auto';mv.resetTurntableRotation&&mv.resetTurntableRotation();mv.jumpCameraToGoal&&mv.jumpCameraToGoal();};
+  panel.appendChild(r);
+});
 </script>
 </body>
 </html>
